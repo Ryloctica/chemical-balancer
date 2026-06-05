@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>化学方程式配平器</title>
+<style>
+  :root {
+    --teal: #0d9488;
+    --teal-light: #14b8a6;
+    --teal-bg: #f0fdfa;
+    --teal-border: #99f6e4;
+    --red: #ef4444;
+    --red-bg: #fef2f2;
+    --red-border: #fecaca;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #f0fdfa 0%, #f8fafc 50%, #f0f9ff 100%);
+    min-height: 100vh;
+    color: var(--slate-800);
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 36px 20px 24px;
+  }
+  .header .icon { font-size: 44px; margin-bottom: 4px; }
+  .header h1 { font-size: 28px; font-weight: 700; color: var(--slate-800); letter-spacing: -.02em; }
+  .header p  { font-size: 15px; color: var(--slate-500); margin-top: 4px; }
+
+  /* ── Container ── */
+  .container { max-width: 720px; margin: 0 auto; padding: 0 20px 40px; }
+
+  /* ── Card ── */
+  .card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--slate-200);
+  }
+
+  /* ── Equation Builder ── */
+  .eq-section { margin-bottom: 20px; }
+  .eq-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--slate-500);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px;
+  }
+  .eq-label::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  .eq-label.reactants::before { background: var(--teal); }
+  .eq-label.products::before { background: #f59e0b; }
+
+  /* compound tag list */
+  .tag-list {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    min-height: 40px; padding: 6px 0;
+  }
+  .tag-list.empty::after {
+    content: '请添加化合物…';
+    color: var(--slate-300);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--teal-bg);
+    border: 1px solid var(--teal-border);
+    color: var(--teal);
+    border-radius: 20px; padding: 4px 6px 4px 14px;
+    font-size: 15px; font-weight: 600;
+    animation: tagIn .2s ease;
+  }
+  @keyframes tagIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+  .tag .formula-render sub { font-size: .75em; color: #0f766e; }
+  .tag .del {
+    cursor: pointer; width: 22px; height: 22px;
+    border-radius: 50%; border: none; background: var(--teal-bg);
+    color: var(--teal); font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .tag .del:hover { background: var(--teal); color: #fff; }
+
+  /* plus separator */
+  .plus-sep {
+    font-size: 18px; color: var(--slate-400); font-weight: 300;
+    user-select: none;
+  }
+
+  /* input row */
+  .input-row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .input-row input {
+    flex: 1; padding: 10px 14px;
+    font-size: 15px; font-family: "Consolas", "Monaco", "Microsoft YaHei", monospace;
+    border: 1.5px solid var(--slate-200); border-radius: var(--radius-sm);
+    outline: none; transition: all .2s;
+    background: var(--slate-50);
+  }
+  .input-row input:focus { border-color: var(--teal); background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,.1); }
+  .input-row input::placeholder { color: var(--slate-300); }
+  .btn-add {
+    padding: 10px 18px; font-size: 14px; font-weight: 600;
+    border: none; border-radius: var(--radius-sm);
+    background: var(--teal); color: #fff; cursor: pointer;
+    transition: all .15s; white-space: nowrap;
+  }
+  .btn-add:hover { background: #0f766e; transform: translateY(-1px); }
+  .btn-add:active { transform: scale(.97); }
+
+  /* arrow divider */
+  .arrow-divider {
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 0; gap: 12px;
+  }
+  .arrow-line { flex: 1; height: 1px; background: var(--slate-200); }
+  .arrow-icon {
+    font-size: 26px; color: var(--slate-400);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+
+  /* balance btn */
+  .btn-balance {
+    display: block; width: 100%; padding: 14px;
+    font-size: 17px; font-weight: 700;
+    border: none; border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--teal), #0f766e);
+    color: #fff; cursor: pointer;
+    box-shadow: var(--shadow-md);
+    transition: all .2s;
+    margin: 16px 0;
+  }
+  .btn-balance:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(13,148,136,.25); }
+  .btn-balance:active { transform: scale(.98); }
+  .btn-balance:disabled {
+    opacity: .5; cursor: not-allowed;
+    transform: none; box-shadow: var(--shadow);
+  }
+
+  /* ── Result ── */
+  .result-panel { display: none; }
+  .result-panel.show {
+    display: block;
+    animation: fadeUp .35s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .result-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: #16a34a;
+    background: #f0fdf4; padding: 4px 12px; border-radius: 20px;
+    border: 1px solid #bbf7d0;
+  }
+  .btn-copy {
+    padding: 6px 14px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--slate-200); border-radius: 20px;
+    background: #fff; color: var(--slate-600); cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .btn-copy:hover { background: var(--slate-100); border-color: var(--slate-300); }
+  .btn-copy.copied { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+
+  .balanced-equation {
+    font-size: 22px; font-weight: 600; color: var(--slate-800);
+    text-align: center; padding: 16px 0 8px;
+    line-height: 1.8; word-break: break-all;
+  }
+  .balanced-equation .coefficient {
+    color: var(--teal); font-size: 1.1em; margin-right: 2px;
+  }
+  .balanced-equation sub { font-size: .7em; color: var(--slate-600); }
+  .balanced-equation .arrow-render {
+    color: var(--slate-400); margin: 0 8px;
+    font-size: 1.2em;
+  }
+
+  /* error */
+  .result-error {
+    display: none;
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    color: var(--red);
+    font-size: 14px;
+    margin-top: 12px;
+  }
+  .result-error.show { display: block; animation: fadeUp .35s ease; }
+
+  /* ── Helper Panel ── */
+  .helper-title {
+    font-size: 13px; font-weight: 600; color: var(--slate-500);
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px;
+  }
+  .helper-group { margin-bottom: 14px; }
+  .helper-group:last-child { margin-bottom: 0; }
+  .helper-label {
+    font-size: 12px; color: var(--slate-400); font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .helper-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+  .helper-btn {
+    padding: 5px 10px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--slate-200); border-radius: var(--radius-sm);
+    background: #fff; color: var(--slate-700); cursor: pointer;
+    transition: all .12s; font-family: "Consolas", "Monaco", monospace;
+    white-space: nowrap;
+  }
+  .helper-btn:hover {
+    background: var(--teal-bg); border-color: var(--teal-border); color: var(--teal);
+    transform: translateY(-1px);
+  }
+  .helper-btn:active { transform: scale(.95); }
+  .helper-btn.ion { color: #7c3aed; }
+  .helper-btn.ion:hover { background: #f5f3ff; border-color: #c4b5fd; color: #6d28d9; }
+  .helper-btn.symbol { color: var(--slate-500); font-size: 16px; padding: 3px 10px; }
+
+  /* ── Examples ── */
+  .example-item {
+    display: inline-block; padding: 6px 14px; margin: 4px;
+    font-size: 13px; font-family: "Consolas", "Monaco", "Microsoft YaHei", monospace;
+    background: var(--slate-50); border: 1px solid var(--slate-200);
+    border-radius: 20px; cursor: pointer; transition: all .15s;
+    color: var(--slate-600); white-space: nowrap;
+  }
+  .example-item:hover {
+    background: var(--teal-bg); border-color: var(--teal-border); color: var(--teal);
+    transform: translateY(-1px);
+  }
+  .example-item sub { font-size: .8em; }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center; padding: 20px;
+    font-size: 12px; color: var(--slate-400);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .container { padding: 0 12px 30px; }
+    .card { padding: 18px 16px; }
+    .balanced-equation { font-size: 18px; }
+    .header h1 { font-size: 24px; }
+    .helper-btn { padding: 4px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="icon">⚗️</div>
+  <h1>化学方程式配平器</h1>
+  <p>输入反应物与生成物，自动求解最小整数系数</p>
+</div>
+
+<div class="container">
+
+  <!-- Equation Builder -->
+  <div class="card">
+    <!-- Reactants -->
+    <div class="eq-section">
+      <div class="eq-label reactants">反应物</div>
+      <div class="tag-list empty" id="reactant-list">
+        <span class="plus-sep" style="display:none">+</span>
+      </div>
+      <div class="input-row">
+        <input type="text" id="reactant-input" placeholder="输入化学式，如 Fe2(SO4)3" autocomplete="off">
+        <button class="btn-add" onclick="addCompound('reactant')">＋ 添加</button>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="arrow-divider">
+      <span class="arrow-line"></span>
+      <span class="arrow-icon">→</span>
+      <span class="arrow-line"></span>
+    </div>
+
+    <!-- Products -->
+    <div class="eq-section">
+      <div class="eq-label products">生成物</div>
+      <div class="tag-list empty" id="product-list">
+        <span class="plus-sep" style="display:none">+</span>
+      </div>
+      <div class="input-row">
+        <input type="text" id="product-input" placeholder="输入化学式，如 Fe(OH)3" autocomplete="off">
+        <button class="btn-add" onclick="addCompound('product')">＋ 添加</button>
+      </div>
+    </div>
+
+    <!-- Balance Button -->
+    <button class="btn-balance" id="balance-btn" onclick="balance()">
+      ⚖️  配平方程式
+    </button>
+
+    <!-- Result -->
+    <div class="result-panel" id="result-panel">
+      <div class="result-header">
+        <span class="result-badge">✓ 配平成功</span>
+        <button class="btn-copy" id="btn-copy" onclick="copyResult()">
+          📋 复制结果
+        </button>
+      </div>
+      <div class="balanced-equation" id="balanced-eq"></div>
+    </div>
+    <div class="result-error" id="result-error"></div>
+  </div>
+
+  <!-- Helper Panel -->
+  <div class="card">
+    <div class="helper-title">🔤 辅助输入（点击插入到光标位置）</div>
+
+    <div class="helper-group">
+      <div class="helper-label">常用元素</div>
+      <div class="helper-btns" id="el-btns"></div>
+    </div>
+
+    <div class="helper-group">
+      <div class="helper-label">常用原子团</div>
+      <div class="helper-btns" id="ion-btns"></div>
+    </div>
+
+    <div class="helper-group">
+      <div class="helper-label">符号</div>
+      <div class="helper-btns" id="sym-btns"></div>
+    </div>
+
+    <div class="helper-group">
+      <div class="helper-label">角标数字（下标）</div>
+      <div class="helper-btns" id="sub-btns"></div>
+    </div>
+
+    <div class="helper-group">
+      <div class="helper-label">电荷标记（上标）</div>
+      <div class="helper-btns" id="sup-btns"></div>
+    </div>
+  </div>
+
+  <!-- Examples -->
+  <div class="card">
+    <div class="helper-title">💡 点击示例快速填充</div>
+    <div id="example-list"></div>
+  </div>
+
+</div>
+
+<div class="footer">化学方程式配平器 · 基于高斯消元法 · 原子守恒</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   Module 1 — 化学式解析器 (Formula Parser)
+   ═══════════════════════════════════════════ */
+
+/** Convert Unicode subscript digits (₀₁₂₃…) to ASCII digits */
+function normalizeDigits(s) {
+  return s.replace(/[₀-₉]/g, c =>
+    String.fromCharCode(c.charCodeAt(0) - 0x2080 + 48)
+  );
+}
+function isDigitToken(t) {
+  return /^\d+$/.test(t) || /^[₀-₉]+$/.test(t);
+}
+function parseDigitToken(t) {
+  return parseInt(normalizeDigits(t), 10);
+}
+
+function parseFormula(raw) {
+  // Trim and remove whitespace
+  const s = raw.trim();
+  if (!s) return null;
+
+  // Tokenize: element symbol | ASCII or Unicode subscript digits | ( | )
+  const tokens = s.match(/([A-Z][a-z]?|[0-9₀-₉]+|[()])/g);
+  if (!tokens) return null;
+
+  const stack = [{}];  // stack of {element: count} maps
+  let i = 0;
+
+  while (i < tokens.length) {
+    const t = tokens[i];
+
+    if (/^[A-Z]/.test(t)) {
+      // Element
+      let count = 1;
+      if (i + 1 < tokens.length && isDigitToken(tokens[i + 1])) {
+        count = parseDigitToken(tokens[++i]);
+      }
+      const top = stack[stack.length - 1];
+      top[t] = (top[t] || 0) + count;
+
+    } else if (t === '(') {
+      stack.push({});
+
+    } else if (t === ')') {
+      if (stack.length < 2) return null; // unbalanced
+      const group = stack.pop();
+      let mult = 1;
+      if (i + 1 < tokens.length && isDigitToken(tokens[i + 1])) {
+        mult = parseDigitToken(tokens[++i]);
+      }
+      const top = stack[stack.length - 1];
+      for (const [el, cnt] of Object.entries(group)) {
+        top[el] = (top[el] || 0) + cnt * mult;
+      }
+    }
+    i++;
+  }
+
+  if (stack.length !== 1) return null; // unbalanced parentheses
+  const result = stack[0];
+  if (Object.keys(result).length === 0) return null;
+  return result;
+}
+
+// Test a formula string for validity
+function isValidFormula(raw) {
+  return parseFormula(raw) !== null;
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 2 — 方程式配平器 (Equation Balancer)
+   ═══════════════════════════════════════════ */
+
+function balanceEquation(reactants, products) {
+  // reactants, products: arrays of {formula: string, atoms: {el: count}}
+  const all = [...reactants, ...products];
+  const nReactants = reactants.length;
+  const nTotal = all.length;
+
+  if (nReactants === 0 || products.length === 0) return null;
+
+  // Collect all unique elements
+  const elSet = new Set();
+  all.forEach(c => Object.keys(c.atoms).forEach(e => elSet.add(e)));
+  const elements = [...elSet];
+  const nElements = elements.length;
+
+  // Build matrix: rows = elements, cols = compounds
+  // Reactants: negative contribution; Products: positive
+  const m = nElements;
+  const n = nTotal;
+  const A = [];
+  for (let r = 0; r < m; r++) {
+    A[r] = [];
+    for (let c = 0; c < n; c++) {
+      const sign = c < nReactants ? -1 : 1;
+      A[r][c] = sign * (all[c].atoms[elements[r]] || 0);
+    }
+  }
+
+  // Gaussian-Jordan elimination to RREF
+  const rref = A.map(row => [...row]);
+  const pivotCols = [];
+  let pivotRow = 0;
+
+  for (let col = 0; col < n && pivotRow < m; col++) {
+    // Find pivot row (largest absolute value in this column)
+    let bestRow = pivotRow;
+    let bestVal = Math.abs(rref[pivotRow][col]);
+    for (let r = pivotRow + 1; r < m; r++) {
+      if (Math.abs(rref[r][col]) > bestVal) {
+        bestVal = Math.abs(rref[r][col]);
+        bestRow = r;
+      }
+    }
+
+    if (bestVal < 1e-10) continue; // Column is zero (or effectively zero)
+
+    // Swap rows
+    [rref[pivotRow], rref[bestRow]] = [rref[bestRow], rref[pivotRow]];
+
+    // Normalize pivot row
+    const pivot = rref[pivotRow][col];
+    for (let j = col; j < n; j++) {
+      rref[pivotRow][j] /= pivot;
+    }
+
+    // Eliminate all other rows
+    for (let r = 0; r < m; r++) {
+      if (r === pivotRow) continue;
+      const factor = rref[r][col];
+      if (Math.abs(factor) < 1e-10) continue;
+      for (let j = col; j < n; j++) {
+        rref[r][j] -= factor * rref[pivotRow][j];
+      }
+    }
+
+    pivotCols.push(col);
+    pivotRow++;
+  }
+
+  const rank = pivotCols.length;
+  const nullity = n - rank;
+
+  if (nullity === 0) {
+    // No non-trivial solution
+    return { error: '该方程式无法配平。请检查反应物和生成物是否正确。', coefficients: null };
+  }
+
+  // Find free columns
+  const freeCols = [];
+  for (let c = 0; c < n; c++) {
+    if (!pivotCols.includes(c)) freeCols.push(c);
+  }
+
+  // Build null space basis vectors (one per free column)
+  // We take the first one (usually nullity=1 for valid chemical equations)
+  const nullVector = new Array(n).fill(0);
+
+  // Set each free variable to 1 and solve for pivot variables
+  // For a single free variable (nullity=1), this gives us the unique solution direction
+  for (const freeCol of freeCols) {
+    nullVector[freeCol] = 1;
+  }
+  for (let pi = 0; pi < rank; pi++) {
+    const pc = pivotCols[pi];
+    let sum = 0;
+    for (const fc of freeCols) {
+      sum += rref[pi][fc];
+    }
+    nullVector[pc] = -sum;
+  }
+
+  // Verify all coefficients have the same sign (or zero)
+  // If mixed signs, try negating
+  let hasPos = false, hasNeg = false;
+  for (const v of nullVector) {
+    if (v > 1e-10) hasPos = true;
+    if (v < -1e-10) hasNeg = true;
+  }
+  if (hasPos && hasNeg) {
+    // Try negating free variables — but for one free variable, just negate the whole vector
+    for (let i = 0; i < n; i++) nullVector[i] = -nullVector[i];
+  }
+
+  // Scale to smallest positive integers
+  const coeffs = rationalToIntegers(nullVector);
+
+  if (!coeffs) {
+    return { error: '无法求得整数系数解。', coefficients: null };
+  }
+
+  // Verify: all coefficients should be positive
+  if (coeffs.some(c => c <= 0)) {
+    return { error: '配平结果含非正系数，请检查方程是否正确。', coefficients: null };
+  }
+
+  return { error: null, coefficients: coeffs };
+}
+
+/** Approximate a float to a rational number, return [num, den] */
+function floatToFrac(x, maxDen) {
+  maxDen = maxDen || 1000;
+  if (Math.abs(x) < 1e-10) return [0, 1];
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+
+  let bestNum = 0, bestDen = 1, bestErr = Infinity;
+  for (let den = 1; den <= maxDen; den++) {
+    const num = Math.round(x * den);
+    const err = Math.abs(x - num / den);
+    if (err < bestErr) {
+      bestErr = err;
+      bestNum = num;
+      bestDen = den;
+      if (err < 1e-10) break;
+    }
+  }
+  return [sign * bestNum, bestDen];
+}
+
+function gcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { [a, b] = [b, a % b]; }
+  return a || 1;
+}
+function gcdArray(arr) {
+  return arr.reduce((g, v) => gcd(g, Math.round(Math.abs(v))), 0);
+}
+function lcm(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  return (a * b) / gcd(a, b);
+}
+
+function rationalToIntegers(vec) {
+  // Convert each entry to [numerator, denominator]
+  const fracs = vec.map(v => floatToFrac(v));
+  // Find LCM of all denominators
+  let denLcm = 1;
+  for (const [, den] of fracs) {
+    denLcm = lcm(denLcm, den);
+  }
+  // Scale to integers
+  const scaled = fracs.map(([num, den]) => Math.round(num * denLcm / den));
+  // Divide by GCD
+  const g = gcdArray(scaled);
+  if (g === 0) return null;
+  return scaled.map(s => Math.round(s / g));
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 3 — 格式化渲染 (Formula Rendering)
+   ═══════════════════════════════════════════ */
+
+/** Convert "Fe2(SO4)3" → HTML with <sub> tags */
+function formulaToHTML(raw) {
+  const s = raw.trim();
+  if (!s) return '';
+  const tokens = s.match(/([A-Z][a-z]?|[0-9₀-₉]+|[()])/g);
+  if (!tokens) return escapeHTML(s);
+
+  let html = '';
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (/^[A-Z]/.test(t)) {
+      html += t;
+    } else if (isDigitToken(t)) {
+      html += '<sub>' + normalizeDigits(t) + '</sub>';
+    } else {
+      html += t;
+    }
+  }
+  return html;
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 4 — UI 状态管理
+   ═══════════════════════════════════════════ */
+
+const state = {
+  reactants: [],   // [{formula: "Fe2(SO4)3", atoms: {...}}]
+  products: [],    // [{formula: "NaOH", atoms: {...}}]
+};
+
+function addCompound(side) {
+  const inputId = side === 'reactant' ? 'reactant-input' : 'product-input';
+  const listId = side === 'reactant' ? 'reactant-list' : 'product-list';
+  const input = document.getElementById(inputId);
+  const raw = input.value.trim();
+
+  if (!raw) return;
+
+  const atoms = parseFormula(raw);
+  if (!atoms) {
+    input.style.borderColor = 'var(--red)';
+    input.style.background = 'var(--red-bg)';
+    setTimeout(() => {
+      input.style.borderColor = '';
+      input.style.background = '';
+    }, 1200);
+    return;
+  }
+
+  // Add to state
+  const arr = side === 'reactant' ? state.reactants : state.products;
+  arr.push({ formula: raw, atoms });
+
+  // Clear input
+  input.value = '';
+  input.focus();
+
+  // Hide result
+  hideResult();
+
+  renderTagList(listId, arr, side);
+}
+
+function removeCompound(side, index) {
+  const arr = side === 'reactant' ? state.reactants : state.products;
+  arr.splice(index, 1);
+  const listId = side === 'reactant' ? 'reactant-list' : 'product-list';
+  renderTagList(listId, arr, side);
+  hideResult();
+}
+
+function renderTagList(listId, arr, side) {
+  const list = document.getElementById(listId);
+  list.innerHTML = '';
+
+  if (arr.length === 0) {
+    list.classList.add('empty');
+    const sep = document.createElement('span');
+    sep.className = 'plus-sep';
+    sep.style.display = 'none';
+    sep.textContent = '+';
+    list.appendChild(sep);
+    return;
+  }
+
+  list.classList.remove('empty');
+
+  arr.forEach((comp, i) => {
+    if (i > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'plus-sep';
+      sep.textContent = '+';
+      list.appendChild(sep);
+    }
+
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.innerHTML = '<span class="formula-render">' + formulaToHTML(comp.formula) + '</span>';
+
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '×';
+    del.title = '删除';
+    del.onclick = () => removeCompound(side, i);
+    tag.appendChild(del);
+
+    list.appendChild(tag);
+  });
+}
+
+function hideResult() {
+  document.getElementById('result-panel').classList.remove('show');
+  document.getElementById('result-error').classList.remove('show');
+}
+
+/** Focus the last active input (for helper buttons to target the right field) */
+let lastFocusedInput = null;
+document.addEventListener('focusin', (e) => {
+  if (e.target.id === 'reactant-input' || e.target.id === 'product-input') {
+    lastFocusedInput = e.target;
+  }
+});
+
+function insertAtCursor(text) {
+  const el = lastFocusedInput || document.getElementById('reactant-input');
+  el.focus();
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  const before = el.value.substring(0, start);
+  const after = el.value.substring(end);
+  el.value = before + text + after;
+  el.selectionStart = el.selectionEnd = start + text.length;
+  el.focus();
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 5 — 配平执行
+   ═══════════════════════════════════════════ */
+
+function balance() {
+  const errEl = document.getElementById('result-error');
+  const panelEl = document.getElementById('result-panel');
+  const eqEl = document.getElementById('balanced-eq');
+
+  errEl.classList.remove('show');
+  panelEl.classList.remove('show');
+
+  if (state.reactants.length === 0 || state.products.length === 0) {
+    errEl.textContent = '⚠️ 请至少添加一个反应物和一个生成物。';
+    errEl.classList.add('show');
+    return;
+  }
+
+  const result = balanceEquation(state.reactants, state.products);
+
+  if (result.error) {
+    errEl.textContent = '⚠️ ' + result.error;
+    errEl.classList.add('show');
+    return;
+  }
+
+  // Build the balanced equation display
+  const allCompounds = [...state.reactants, ...state.products];
+  const nR = state.reactants.length;
+  const coeffs = result.coefficients;
+
+  const renderSide = (compounds, coeffs, startIdx) => {
+    return compounds.map((comp, i) => {
+      const c = coeffs[startIdx + i];
+      const prefix = c === 1 ? '' : '<span class="coefficient">' + c + '</span>';
+      return prefix + formulaToHTML(comp.formula);
+    }).join(' <span style="color:#cbd5e1;font-size:18px">+</span> ');
+  };
+
+  const leftHTML = renderSide(state.reactants, coeffs, 0);
+  const rightHTML = renderSide(state.products, coeffs, nR);
+
+  eqEl.innerHTML = leftHTML + ' <span class="arrow-render">→</span> ' + rightHTML;
+
+  panelEl.classList.add('show');
+
+  // Reset copy button
+  const copyBtn = document.getElementById('btn-copy');
+  copyBtn.textContent = '📋 复制结果';
+  copyBtn.classList.remove('copied');
+}
+
+function copyResult() {
+  // Build plain text version
+  const allCompounds = [...state.reactants, ...state.products];
+  const nR = state.reactants.length;
+
+  const result = balanceEquation(state.reactants, state.products);
+  if (!result || result.error || !result.coefficients) return;
+
+  const coeffs = result.coefficients;
+
+  const renderSideText = (compounds, startIdx) => {
+    return compounds.map((comp, i) => {
+      const c = coeffs[startIdx + i];
+      return (c === 1 ? '' : c) + comp.formula;
+    }).join(' + ');
+  };
+
+  const text = renderSideText(state.reactants, 0) + ' → ' + renderSideText(state.products, nR);
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 复制结果';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('btn-copy');
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 复制结果';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 6 — 辅助输入按钮 & 示例
+   ═══════════════════════════════════════════ */
+
+function buildHelperButtons() {
+  const elements = [
+    'H','He','Li','Be','B','C','N','O','F','Ne',
+    'Na','Mg','Al','Si','P','S','Cl','Ar',
+    'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn',
+    'Br','Ag','I','Ba','Pt','Au','Hg','Pb','Sn'
+  ];
+  const ions = [
+    { text: 'OH',  label: 'OH⁻' },
+    { text: 'SO4', label: 'SO₄²⁻' },
+    { text: 'NO3', label: 'NO₃⁻' },
+    { text: 'CO3', label: 'CO₃²⁻' },
+    { text: 'PO4', label: 'PO₄³⁻' },
+    { text: 'NH4', label: 'NH₄⁺' },
+    { text: 'MnO4',label: 'MnO₄⁻' },
+    { text: 'HCO3',label: 'HCO₃⁻' },
+    { text: 'HSO4',label: 'HSO₄⁻' },
+    { text: 'CH3COO',label: 'CH₃COO⁻' },
+    { text: 'Cr2O7',label: 'Cr₂O₇²⁻' },
+    { text: 'ClO3',label: 'ClO₃⁻' },
+  ];
+  const symbols = ['(', ')', '+', '→', '·'];
+
+  const subDigits = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
+  const supCharges = [
+    { text: '⁺',  label: '⁺' },
+    { text: '²⁺', label: '²⁺' },
+    { text: '³⁺', label: '³⁺' },
+    { text: '⁴⁺', label: '⁴⁺' },
+    { text: '⁻',  label: '⁻' },
+    { text: '²⁻', label: '²⁻' },
+    { text: '³⁻', label: '³⁻' },
+    { text: '⁴⁻', label: '⁴⁻' },
+  ];
+
+  const elContainer = document.getElementById('el-btns');
+  elements.forEach(el => {
+    const btn = document.createElement('button');
+    btn.className = 'helper-btn';
+    btn.textContent = el;
+    btn.title = '插入 ' + el;
+    btn.onclick = () => insertAtCursor(el);
+    elContainer.appendChild(btn);
+  });
+
+  const ionContainer = document.getElementById('ion-btns');
+  ions.forEach(ion => {
+    const btn = document.createElement('button');
+    btn.className = 'helper-btn ion';
+    btn.textContent = ion.label;
+    btn.title = '插入 ' + ion.text;
+    btn.onclick = () => insertAtCursor(ion.text);
+    ionContainer.appendChild(btn);
+  });
+
+  const symContainer = document.getElementById('sym-btns');
+  symbols.forEach(sym => {
+    const btn = document.createElement('button');
+    btn.className = 'helper-btn symbol';
+    btn.textContent = sym;
+    btn.title = '插入 ' + sym;
+    btn.onclick = () => insertAtCursor(sym);
+    symContainer.appendChild(btn);
+  });
+
+  const subContainer = document.getElementById('sub-btns');
+  subDigits.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'helper-btn';
+    btn.textContent = d;
+    btn.title = '插入下标数字 ' + normalizeDigits(d);
+    btn.style.cssText = 'font-size:16px;padding:4px 10px;';
+    btn.onclick = () => insertAtCursor(d);
+    subContainer.appendChild(btn);
+  });
+
+  const supContainer = document.getElementById('sup-btns');
+  supCharges.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'helper-btn';
+    btn.textContent = ch.label;
+    btn.title = '插入电荷标记 ' + ch.label;
+    btn.style.cssText = 'color:#c2410c;font-size:14px;padding:4px 10px;';
+    btn.onclick = () => insertAtCursor(ch.text);
+    supContainer.appendChild(btn);
+  });
+}
+
+function buildExamples() {
+  const examples = [
+    { label: 'H₂ + O₂ → H₂O',
+      reactants: ['H2', 'O2'], products: ['H2O'] },
+    { label: 'Fe₂(SO₄)₃ + NaOH → Fe(OH)₃ + Na₂SO₄',
+      reactants: ['Fe2(SO4)3', 'NaOH'], products: ['Fe(OH)3', 'Na2SO4'] },
+    { label: 'C₃H₈ + O₂ → CO₂ + H₂O',
+      reactants: ['C3H8', 'O2'], products: ['CO2', 'H2O'] },
+    { label: 'KMnO₄ + HCl → KCl + MnCl₂ + Cl₂ + H₂O',
+      reactants: ['KMnO4', 'HCl'], products: ['KCl', 'MnCl2', 'Cl2', 'H2O'] },
+    { label: 'Al + Fe₂O₃ → Al₂O₃ + Fe',
+      reactants: ['Al', 'Fe2O3'], products: ['Al2O3', 'Fe'] },
+    { label: 'CaCO₃ + HCl → CaCl₂ + H₂O + CO₂',
+      reactants: ['CaCO3', 'HCl'], products: ['CaCl2', 'H2O', 'CO2'] },
+  ];
+
+  const container = document.getElementById('example-list');
+  examples.forEach(ex => {
+    const btn = document.createElement('button');
+    btn.className = 'example-item';
+    btn.innerHTML = ex.label.replace(/(\d+)/g, '<sub>$1</sub>');
+    btn.title = '点击加载此方程式';
+    btn.onclick = () => loadExample(ex);
+    container.appendChild(btn);
+  });
+}
+
+function loadExample(ex) {
+  // Clear current state
+  state.reactants = ex.reactants.map(f => ({ formula: f, atoms: parseFormula(f) }));
+  state.products = ex.products.map(f => ({ formula: f, atoms: parseFormula(f) }));
+
+  renderTagList('reactant-list', state.reactants, 'reactant');
+  renderTagList('product-list', state.products, 'product');
+  hideResult();
+
+  // Auto-balance
+  setTimeout(balance, 150);
+}
+
+
+/* ═══════════════════════════════════════════
+   Module 7 — 键盘事件 & 初始化
+   ═══════════════════════════════════════════ */
+
+function init() {
+  buildHelperButtons();
+  buildExamples();
+
+  // Enter key to add compound
+  document.getElementById('reactant-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addCompound('reactant'); }
+  });
+  document.getElementById('product-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addCompound('product'); }
+  });
+
+  // Focus first input
+  document.getElementById('reactant-input').focus();
+  lastFocusedInput = document.getElementById('reactant-input');
+
+  // Load a default example
+  loadExample({
+    label: 'Fe₂(SO₄)₃ + NaOH → Fe(OH)₃ + Na₂SO₄',
+    reactants: ['Fe2(SO4)3', 'NaOH'],
+    products: ['Fe(OH)3', 'Na2SO4']
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
